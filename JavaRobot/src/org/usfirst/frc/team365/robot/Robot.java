@@ -124,53 +124,7 @@ public class Robot extends IterativeRobot {
 
 	}
 	
-/*	void adjustLF(double newAngle) {
-		double oldLF = encoderLF.getRaw()*360./256.;
-		if (oldLF > 180) oldLF = oldLF - 360;
-		else if (oldLF < -180) oldLF = oldLF + 360;
-		double errorLF = Math.abs(newAngle - oldLF);
-		boolean dirLF = getDirection(oldLF,newAngle);
-		if (errorLF > 180) errorLF = 360 - errorLF;
-		double powerLF = turnPower(errorLF,dirLF);
-		turnLF.set(powerLF);
 
-	}
-
-	void adjustRF(double newAngle) {
-		double oldRF = encoderRF.getRaw()*360./256.;
-		if (oldRF > 180) oldRF = oldRF - 360;
-		else if (oldRF < -180) oldRF = oldRF + 360;
-		double errorRF = Math.abs(newAngle - oldRF);
-		boolean dirRF = getDirection(oldRF,newAngle);
-		if (errorRF > 180) errorRF = 360 - errorRF;
-		double powerRF = turnPower(errorRF,dirRF);
-		turnRF.set(powerRF);
-
-	}
-
-	void adjustLR(double newAngle) {
-		double oldLR = encoderLR.getRaw()*360./256.;
-		if (oldLR > 180) oldLR = oldLR - 360;
-		else if (oldLR < -180) oldLR = oldLR + 360;
-		double errorLR = Math.abs(newAngle - oldLR);
-		boolean dirLR = getDirection(oldLR,newAngle);
-		if (errorLR > 180) errorLR = 360 - errorLR;
-		double powerLR = turnPower(errorLR,dirLR);
-		turnLR.set(powerLR);
-
-	}
-
-	void adjustRR(double newAngle) {
-		double oldRR = encoderRR.getRaw()*360./256.;
-		if (oldRR > 180) oldRR = oldRR - 360;
-		else if (oldRR < -180) oldRR = oldRR + 360;
-		double errorRR = Math.abs(newAngle - oldRR);
-		boolean dirRR = getDirection(oldRR,newAngle);
-		if (errorRR > 180) errorRR = 360 - errorRR;
-		double powerRR = turnPower(errorRR,dirRR);
-		turnRR.set(powerRR);
-
-	}*/
 
 	double turnPower(double error,boolean direction) {
 		if (direction) return 0.3;
