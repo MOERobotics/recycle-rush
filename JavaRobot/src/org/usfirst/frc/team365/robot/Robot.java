@@ -1,6 +1,7 @@
 package org.usfirst.frc.team365.robot;
 
 import edu.wpi.first.wpilibj.CANTalon;
+import edu.wpi.first.wpilibj.CounterBase.EncodingType;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.Gyro;
@@ -13,29 +14,29 @@ import edu.wpi.first.wpilibj.livewindow.LiveWindow;
  * functions corresponding to each mode, as described in the IterativeRobot
  * documentation. If you change the name of this class or the package after
  * creating this project, you must also update the manifest file in the resource
- * directory.  Test
+ * directory.  Shane, Aditya Shukla
  */
 
 //supra leet prog team
 public class Robot extends IterativeRobot {
 	DriverStation ds;
 	Joystick xbox = new Joystick(1);
-	CANTalon turnLF = new CANTalon(4);
-	CANTalon turnRF = new CANTalon(5);
-	CANTalon turnLR = new CANTalon(6);
-	CANTalon turnRR = new CANTalon(7);
-	CANTalon driveLF = new CANTalon(0);
-	CANTalon driveRF = new CANTalon(1);
-	CANTalon driveLR = new CANTalon(2);
-	CANTalon driveRR = new CANTalon(3);
-	Encoder encoderLF = new Encoder(1,2);
-	Encoder encoderRF = new Encoder(3,4);
-	Encoder encoderLR = new Encoder(5,6);
-	Encoder encoderRR = new Encoder(7,8);
+	CANTalon turnLF = new CANTalon(3);
+	CANTalon turnRF = new CANTalon(4);
+	CANTalon turnLR = new CANTalon(11);
+	CANTalon turnRR = new CANTalon(12);
+	CANTalon driveLF = new CANTalon(1);
+	CANTalon driveRF = new CANTalon(2);
+	CANTalon driveLR = new CANTalon(14);
+	CANTalon driveRR = new CANTalon(13);
+	Encoder encoderLF = new Encoder(4,5,true,EncodingType.k1X);
+	Encoder encoderRF = new Encoder(0,1,true,EncodingType.k1X);
+	Encoder encoderLR = new Encoder(6,7,true,EncodingType.k1X);
+	Encoder encoderRR = new Encoder(8,9,true,EncodingType.k1X);
 	// PIDController controller  = new PIDController(.1,.001,0,encoderLF,turnLF);
 	Encoder distance = new Encoder(9,10);
 	final int ENCODER_MAGIC_NUMBER = 256;
-	Gyro moeGyro = new Gyro(0);
+	Gyro moeGyro = new Gyro(1);
 
 	
 	public Robot(){
@@ -75,20 +76,28 @@ public class Robot extends IterativeRobot {
 	 * This function is called once each time the robot enters tele-operated mode
 	 */
 	public void teleopInit(){
+		
 	}
 
 	/**
 	 * This function is called periodically during operator control
 	 */
 	public void teleopPeriodic() {
-		crabDrive();
+		if(xbox.getTrigger()){
+			this.moeGyro.reset();
+			this.encoderLF.reset();
+			encoderRF.reset();
+			encoderLR.reset();
+			encoderRR.reset();
+		}
+		this.swerveDriveRobotCentric();
 	}
 
 	/**
 	 * This function is called periodically during test mode
 	 */
 	public void testPeriodic() {
-		LiveWindow.run();
+	
 	}
 
 	void crabDrive() {
@@ -101,17 +110,89 @@ public class Robot extends IterativeRobot {
 		adjust(angle,encoderLR,turnLR);
 		adjust(angle,encoderRR,turnRR);
 		
-		//adjustLF(angle);
-		//adjustRF(angle);
-		//adjustLR(angle);
-		//adjustRR(angle);
 		driveLF.set(power);
 		driveRF.set(power);
 		driveLR.set(power);
 		driveRR.set(power);
 		
-
-
+	}
+	
+	
+	void swerveDriveRobotCentric(){
+		double x = xbox.getRawAxis(4);
+		double y = -xbox.getRawAxis(5);
+		double theta = limit(xbox.getX());
+		
+		
+		double xLF = x +theta;
+		double yLF = y +theta;
+		double angleLF = getAngle(xLF,yLF);
+		double powerLF = getPower(xLF,yLF);
+		
+		double xRF = x +theta;
+		double yRF = y -theta;
+		double angleRF = getAngle(xRF,yRF);
+		double powerRF = getPower(xRF,yRF);
+		
+		double xLR = x -theta;
+		double yLR = y +theta;
+		double angleLR = getAngle(xLR,yLR);
+		double powerLR = getPower(xLR,yLR);
+		
+		double xRR = x -theta;
+		double yRR = y -theta;
+		double angleRR = getAngle(xRR,yRR);
+		double powerRR = getPower(xRR,yRR);
+		
+		adjust(angleLF,encoderLF,turnLF);
+		adjust(angleRF,encoderRF,turnRF);
+		adjust(angleLR,encoderLR,turnLR);
+		adjust(angleRR,encoderRR,turnRR);
+		
+		driveLF.set(powerLF);
+		driveRF.set(powerRF);
+		driveLR.set(powerLR);
+		driveRR.set(powerRR);
+		
+	}
+	
+	void swerveDriveFieldCentric(){
+		double x = xbox.getRawAxis(4);
+		double y = -xbox.getRawAxis(5);
+		double theta = limit(xbox.getX());
+		double robotAngle = moeGyro.getAngle();
+		
+		
+		double xLF = x +theta;
+		double yLF = y +theta;
+		double angleLF = getAngle(xLF,yLF);
+		double powerLF = getPower(xLF,yLF);
+		
+		double xRF = x +theta;
+		double yRF = y -theta;
+		double angleRF = getAngle(xRF,yRF);
+		double powerRF = getPower(xRF,yRF);
+		
+		double xLR = x -theta;
+		double yLR = y +theta;
+		double angleLR = getAngle(xLR,yLR);
+		double powerLR = getPower(xLR,yLR);
+		
+		double xRR = x -theta;
+		double yRR = y -theta;
+		double angleRR = getAngle(xRR,yRR);
+		double powerRR = getPower(xRR,yRR);
+		
+		adjust(angleLF,encoderLF,turnLF);
+		adjust(angleRF,encoderRF,turnRF);
+		adjust(angleLR,encoderLR,turnLR);
+		adjust(angleRR,encoderRR,turnRR);
+		
+		driveLF.set(powerLF);
+		driveRF.set(powerRF);
+		driveLR.set(powerLR);
+		driveRR.set(powerRR);
+		
 	}
 
 	void adjust(double newAngle,Encoder encoder,CANTalon talon) {
@@ -126,53 +207,7 @@ public class Robot extends IterativeRobot {
 
 	}
 	
-/*	void adjustLF(double newAngle) {
-		double oldLF = encoderLF.getRaw()*360./256.;
-		if (oldLF > 180) oldLF = oldLF - 360;
-		else if (oldLF < -180) oldLF = oldLF + 360;
-		double errorLF = Math.abs(newAngle - oldLF);
-		boolean dirLF = getDirection(oldLF,newAngle);
-		if (errorLF > 180) errorLF = 360 - errorLF;
-		double powerLF = turnPower(errorLF,dirLF);
-		turnLF.set(powerLF);
 
-	}
-
-	void adjustRF(double newAngle) {
-		double oldRF = encoderRF.getRaw()*360./256.;
-		if (oldRF > 180) oldRF = oldRF - 360;
-		else if (oldRF < -180) oldRF = oldRF + 360;
-		double errorRF = Math.abs(newAngle - oldRF);
-		boolean dirRF = getDirection(oldRF,newAngle);
-		if (errorRF > 180) errorRF = 360 - errorRF;
-		double powerRF = turnPower(errorRF,dirRF);
-		turnRF.set(powerRF);
-
-	}
-
-	void adjustLR(double newAngle) {
-		double oldLR = encoderLR.getRaw()*360./256.;
-		if (oldLR > 180) oldLR = oldLR - 360;
-		else if (oldLR < -180) oldLR = oldLR + 360;
-		double errorLR = Math.abs(newAngle - oldLR);
-		boolean dirLR = getDirection(oldLR,newAngle);
-		if (errorLR > 180) errorLR = 360 - errorLR;
-		double powerLR = turnPower(errorLR,dirLR);
-		turnLR.set(powerLR);
-
-	}
-
-	void adjustRR(double newAngle) {
-		double oldRR = encoderRR.getRaw()*360./256.;
-		if (oldRR > 180) oldRR = oldRR - 360;
-		else if (oldRR < -180) oldRR = oldRR + 360;
-		double errorRR = Math.abs(newAngle - oldRR);
-		boolean dirRR = getDirection(oldRR,newAngle);
-		if (errorRR > 180) errorRR = 360 - errorRR;
-		double powerRR = turnPower(errorRR,dirRR);
-		turnRR.set(powerRR);
-
-	}*/
 
 	double turnPower(double error,boolean direction) {
 		if (direction) return 0.3;
@@ -190,8 +225,7 @@ public class Robot extends IterativeRobot {
 
 	double getAngle(double x,double y){
 		double angle = Math.atan2(y, x)*180/Math.PI;
-		if (angle > 180) angle = angle - 360;
-		else if (angle < -180) angle = angle + 360;
+		angle = angle % 360;
 		return angle;
 	}
 
