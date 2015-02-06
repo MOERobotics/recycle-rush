@@ -8,6 +8,8 @@ import edu.wpi.first.wpilibj.Relay.Direction;
 import edu.wpi.first.wpilibj.Relay.Value;
 
 /**
+ * Ben Hylak
+ *  
  * The VM is configured to automatically run this class, and to call the
  * functions corresponding to each mode, as described in the IterativeRobot
  * documentation. If you change the name of this class or the package after
@@ -61,6 +63,31 @@ public class Robot extends IterativeRobot {
     	relay.setDirection(Direction.kForward);
     	relay.set(Value.kOn);
         talon.set(stick.getY());
+        
+        int Xloc = 0;
+        int Yloc = 1;
+        int angle = 2;
+        
+        int wheel1=0;
+        int wheel2=1;
+        int wheel3=2;
+        int wheel4=3;
+        
+        double[][] wheelVals = new double[4][3]; 
+        
+        double wheel1Y = wheelVals[wheel1][Yloc];
+        double wheel1Angle = wheelVals[wheel1][angle];
+        
+        
+        
+        
+        
+        
+        
+        //wheelVal
+        //to access wheel 1 X use:
+        // wheelVals[0][0] (remember arrays are 0 indexed)
+        // for wheel 1 Y use wheelVals[0][1] 
     }
     
     /**
