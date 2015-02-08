@@ -54,6 +54,16 @@ public class Robot extends IterativeRobot {
 	boolean dirLR;
 	boolean dirRR;
 	
+	Joystick functionBox = new Joystick(1);
+	CANTalon lifterOne = new CANTalon(0);
+	CANTalon lifterTwo = new CANTalon(15);
+	
+	Solenoid armLeft = new Solenoid(5);
+	Solenoid armRight = new Solenoid(6);
+	
+	Encoder liftEncoder = new Encoder(14,16,true,EncodingType.k1X);
+	
+	
 	public Robot(){
 		ds = DriverStation.getInstance();
 	}
@@ -125,7 +135,24 @@ public class Robot extends IterativeRobot {
 			encoderRR.reset();
 		}
 		this.swerveDriveRobotCentric();
+		
+		if(teleopLoop%20 == 0){
+			boolean newSet;
+			
+			SmartDashboard.putNumber("encoderLF", encoderLF.getRaw());
+			SmartDashboard.putNumber("encoderRF", encoderRF.getRaw());
+			SmartDashboard.putNumber("encoderRR", encoderRR.getRaw());
+			SmartDashboard.putNumber("encoderLR", encoderLR.getRaw());
+			
+			SmartDashboard.putNumber("liftEncoder", liftEncoder.getRaw());
+			
+			controlLifter();
+						
+			
+		}
+		
 	}
+	
 
 	/**
 	 * This function is called periodically during test mode
@@ -392,6 +419,34 @@ public class Robot extends IterativeRobot {
 		adjust(angleRR,encoderRR,turnRR);
     
 		//double powerLF = getPower(xLF,yLF);
+    }
+    
+    void controlLifter(){
+    	
+    	double power = -functionBox.getRawAxis(5);
+    	power = .5*power;
+    	
+    	lifterOne.set(power);
+    	lifterTwo.set(power);
+    	
+    	if(functionBox.getRawButton(1)){
+    			armLeft.set(false);
+    			armRight.set(false);
+    	}else if(functionBox.getRawButton(2)) {
+    			armLeft.set(false);
+    			armRight.set(true);
+    			
+    	}else if(functionBox.getRawButton(3)){
+    			armLeft.set(true);
+    			armRight.set(false);
+    			
+    	}else if(functionBox.getRawButton(4)){
+    			armLeft.set(true);
+    			armRight.set(true);
+    	}
+    	
+    		
+    		
     }
     
 
