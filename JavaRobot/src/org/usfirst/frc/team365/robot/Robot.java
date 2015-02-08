@@ -172,8 +172,7 @@ public class Robot extends IterativeRobot {
 		
 		double xLR = x -theta;
 		xLR =-xLR;
-		double yLR = y +theta;
-		
+		double yLR = y +theta;		
 		double angleLR = getAngle(xLR,yLR);
 		double powerLR = getPower(xLR,yLR);
 		
@@ -333,10 +332,10 @@ public class Robot extends IterativeRobot {
         double left = y + x;
         double right = y - x;
 
-        adjustLF(0);
-        adjustRF(0);
-        adjustLR(0);
-        adjustRR(0);
+        adjust(0,encoderLF,turnLF);
+        adjust(0,encoderRF,turnRF);
+        adjust(0,encoderLR,turnLR);
+        adjust(0,encoderRR,turnRR);
 
         left = limit(left);
         right = limit(right);
@@ -346,6 +345,54 @@ public class Robot extends IterativeRobot {
         driveLR.set(right);
         driveRR.set(right);
     }
-
+    
+    void swerveDrive(){
+    	double x = xbox.getX();
+    	double y = -xbox.getRawAxis(5);
+    	
+    	double angleLF;
+    	double angleRF;
+    	double angleRR;
+    	double angleLR;
+    	
+    	double powerLF;
+    	double powerRF;
+    	double powerRR;
+    	double powerLR;
+    	
+    	double twist;
+    	
+    	if (xbox.getX() > 0.3) twist = 0.2;
+    	else if (xbox.getX() < -0.3) twist = -0.2;
+    	else twist = 0;
+    // compute angle for left front
+    	double newYLF = y + twist;
+    	double newXLF = x + twist;
+    	angleLF = getAngle(newXLF,newYLF);
+    	powerLF = getPower(newXLF, newYLF);
+    // compute angle for right front
+    	double newYRF = y - twist;
+    	double newXRF = x + twist;
+    	angleRF = getAngle(newXRF, newYRF);
+    	powerRF = getPower(newXRF, newYRF);
+    //compute angle for right rear
+    	double newYRR = y - twist;
+    	double newXRR = x - twist;
+    	angleRR = getAngle(newXRR, newYRR);
+    	powerRR = getPower(newXRR, newYRR);
+    //compute angle for left rear
+    	double newYLR = y + twist;
+    	double newXLR = x - twist;
+    	angleLR = getAngle(newXLR, newYLR);
+    	powerLR =getPower(newXLR, newYLR);
+    	
+    	adjust(angleLF,encoderLF,turnLF);
+		adjust(angleRF,encoderRF,turnRF);
+		adjust(angleLR,encoderLR,turnLR);
+		adjust(angleRR,encoderRR,turnRR);
+    
+		//double powerLF = getPower(xLF,yLF);
+    }
+    
 
 }
