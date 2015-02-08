@@ -1,6 +1,7 @@
 package org.usfirst.frc.team365.robot;
 
 import edu.wpi.first.wpilibj.CANTalon;
+import edu.wpi.first.wpilibj.Solenoid;
 import edu.wpi.first.wpilibj.CounterBase.EncodingType;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Encoder;
@@ -38,8 +39,14 @@ public class Robot extends IterativeRobot {
 	Encoder encoderRR = new Encoder(8,9,true,EncodingType.k1X);
 	
 	Encoder distEncoder = new Encoder(2,3,true,EncodingType.k1X);
+	Encoder dist2Encoder = new Encoder(17,15,true,EncodingType.k1X);
 	
-	Gyro moeGyro = new Gyro(1);
+	Encoder liftEncoder = new Encoder(14,16,true,EncodingType.k1X);
+	
+//	Solenoid liftZero = new Solenoid(0);
+//	Solenoid liftOne = new Solenoid(1);
+	
+	Gyro moeGyro = new Gyro(0);
 	
 	Joystick xBox = new Joystick(0);
 	
@@ -47,23 +54,24 @@ public class Robot extends IterativeRobot {
 	int autoStep;
 	int disabledLoop;
 	int teleopLoop;
-	boolean lastDirLF;
-	boolean lastDirRF;
-	boolean lastDirLR;
-	boolean lastDirRR;
+	int loopCount;
+//	boolean lastDirLF;
+//	boolean lastDirRF;
+//	boolean lastDirLR;
+//	boolean lastDirRR;
 	double deltaLF;
 	double deltaRF;
 	double deltaLR;
 	double deltaRR;
-	double sumLF;
-	double sumRF;
-	double sumLR;
-	double sumRR;
+//	double sumLF;
+//	double sumRF;
+//	double sumLR;
+//	double sumRR;
 	int countTime;
-	boolean overshootLF;
-	boolean overshootRF;
-	boolean overshootLR;
-	boolean overshootRR;
+//	boolean overshootLF;
+//	boolean overshootRF;
+//	boolean overshootLR;
+//	boolean overshootRR;
 	double setPoint;
 	boolean setLF;
 	boolean setRF;
@@ -80,6 +88,10 @@ public class Robot extends IterativeRobot {
 	double saveX;
 	double saveY;
 	double straightSum;
+	double lowBearing;
+	double highBearing;
+	double avgBearing;
+	double sumBearing;
 	boolean last1;
 	boolean last2;
 	boolean last3;
@@ -87,7 +99,7 @@ public class Robot extends IterativeRobot {
 	boolean last5;
 	boolean last7;
 	boolean last8;
-	double lastAxis3;
+	double lastAxisZ;
 	double lastPad6;
 	boolean dirLF;
 	boolean dirRF;
@@ -97,8 +109,10 @@ public class Robot extends IterativeRobot {
 	boolean allSet;
 	boolean setWheels;
 	boolean swerveMode;
+	boolean turnAround;
 	double fieldX;
 	double fieldY;
+	double printAngle;
 	
     /**
      * This function is run when the robot is first started up and should be
@@ -114,6 +128,11 @@ public class Robot extends IterativeRobot {
     	turnRF.enableBrakeMode(true);
     	turnLR.enableBrakeMode(true);
     	turnRR.enableBrakeMode(true);
+    	
+    	driveLF.enableBrakeMode(false);
+    	driveRF.enableBrakeMode(false);
+    	driveLR.enableBrakeMode(false);
+    	driveRR.enableBrakeMode(false);
     	
     	moeGyro.setSensitivity(.0125);
     	
@@ -138,10 +157,11 @@ public class Robot extends IterativeRobot {
     		encoderRR.reset();
     		
     		saveX = 0;
-    		saveY = 0.8;
-    		
+    		saveY = 0.8;  		
+    	}
+    	
+    	if (xBox.getRawButton(10)) {
     		distEncoder.reset();
-    		
     	}
     	
     	if (xBox.getRawButton(7)) {
@@ -156,6 +176,9 @@ public class Robot extends IterativeRobot {
     		int wheelRR = encoderRR.getRaw();
     		
     		int dist = distEncoder.getRaw();
+    		int dist2 = dist2Encoder.getRaw();
+    		
+    		int liftHeight = liftEncoder.getRaw();
     		
     		double bearing = moeGyro.getAngle();
     		
@@ -165,8 +188,13 @@ public class Robot extends IterativeRobot {
     		SmartDashboard.putNumber("encoderRR", wheelRR);
     		
     		SmartDashboard.putNumber("distance", dist);
+    		SmartDashboard.putNumber("dist2", dist2);
+    		
+    		SmartDashboard.putNumber("lift", liftHeight);
     		
     		SmartDashboard.putNumber("gyro", bearing);
+    		
+    		SmartDashboard.putNumber("POV", xBox.getPOV());
     	}
 
     }
@@ -175,18 +203,24 @@ public class Robot extends IterativeRobot {
      * This function is run once each time the robot enters autonomous mode
      */
     public void autonomousInit() {
+		autoStep = 1;
     	autoLoop = 0;
+    	loopCount = 0;
+    	moeGyro.reset();
+    	distEncoder.reset();
     }
 
     /**
      * This function is called periodically during autonomous
      */
     public void autonomousPeriodic() {
-    	if(autoLoop < 100) //Check if we've completed 100 loops (approximately 2 seconds)
-		{
-			
+  //  	if(autoLoop < 100) //Check if we've completed 100 loops (approximately 2 seconds)
+//		{
+	
 			autoLoop++;
-		}
+			loopCount++;
+			autoStackRoutine();
+//		}
 		
     }
     
@@ -196,7 +230,7 @@ public class Robot extends IterativeRobot {
     public void teleopInit(){
     	teleopLoop = 0;
     	lastPad6 = 0;
-    	lastAxis3 = 0;
+    	lastAxisZ = 0;
     	last1 = false;
     	last2 = false;
     	last3 = false;
@@ -213,6 +247,7 @@ public class Robot extends IterativeRobot {
     	setLR = false;
     	setRR = false;
     	swerveMode = true;
+    	turnAround = false;
     	setWheels = false;
     	allSet = false;
  //   	saveX = 0.;
@@ -224,9 +259,9 @@ public class Robot extends IterativeRobot {
      */
     public void teleopPeriodic() {
     	
-   // 	setPoint = SmartDashboard.getNumber("DB/Slider 0", 0.0);
-    	
-    	setPoint = 3;
+    	setPoint = SmartDashboard.getNumber("DB/Slider 3", 0.0);
+    	if (setPoint < 1) setPoint = 2;
+ //   	setPoint = 2;
     	
     	boolean new1 = xBox.getRawButton(1);
     	boolean new2 = xBox.getRawButton(2);
@@ -236,7 +271,7 @@ public class Robot extends IterativeRobot {
     	boolean new7 = xBox.getRawButton(7);
     	boolean new8 = xBox.getRawButton(8);
     	
-    	double newAxis3 = xBox.getRawAxis(3);
+    	double newAxisZ = xBox.getZ();
     	double newPad6 = xBox.getRawAxis(6);
     	
     	teleopLoop++;
@@ -244,13 +279,13 @@ public class Robot extends IterativeRobot {
     	if (robotBearing >=360 || robotBearing <=-360) moeGyro.reset();
     	
     	encoderRevolutionCheck();
-    	
+  //  	crabDrive360();
  //   	testRoutine();
-    	wheelAngleTestRoutine();
+ //   	wheelAngleTestRoutine();
     	
 /*
-    	if (newPad6 > -0.5) {
-    		if (lastPad6 > -0.5 && lastPad6 < 0.5) {
+    	if (newAxis3 < -0.5) {
+    		if (lastAxis3 >= -0.5) {
     		//	allSet = false;
     			startWheelSet();
     			// 			setWheels = true;
@@ -259,7 +294,7 @@ public class Robot extends IterativeRobot {
     		saveX = 0;
     		saveY = 0.7;
     	}
-    	else if (new7 || new8) {
+    	if (new7 || new8) {
     		if (!last7 && !last8) {
     		//	allSet = false;
     			startWheelSet();
@@ -268,20 +303,32 @@ public class Robot extends IterativeRobot {
     		gentleStrafe();
     		saveX = 0.7;
     		saveY = 0;
+    	} */  
+    	if (newAxisZ > 0.5) {
+    		if (lastAxisZ <= 0.5) {
+    			startWheelSet();
+    			moeGyro.reset();
+    			straightSum = 0;
+    			turnAround = false;
+    			
+    		}
+    		driveStraight();
     	}
     	else if (!swerveMode) {
-    		// 	  carMode();
-    		tankDrive();
+    		 	  carMode();
+    	//	tankDrive();
     	}
     	else {
-    		crabDrive360();
-    		//   	  swerveDrive360();
+ //   		crabDrive360();
+    //		swerveDrive360();
+    		optimizedSwerve();
     	}
 
     	if (new1 && !last1) {
     		swerveMode = false;
     	//	allSet = false;
     		startWheelSet();
+    		turnAround = false;
     	}
     	else if (new4 && !last4) swerveMode = true;
     	/*
@@ -304,7 +351,7 @@ public class Robot extends IterativeRobot {
     	last5 = new5;
     	last7 = new7;
     	last8 = new8;
-    	lastAxis3 = newAxis3;
+    	lastAxisZ = newAxisZ;
 
     	if (teleopLoop % 20 == 0) {
 
@@ -316,6 +363,9 @@ public class Robot extends IterativeRobot {
     		int wheelRR = encoderRR.getRaw();
 
     		int dist = distEncoder.getRaw();
+    		int dist2 = dist2Encoder.getRaw();
+    		
+    		int liftHeight = liftEncoder.getRaw();
 
     		double bearing = moeGyro.getAngle();
 
@@ -325,12 +375,23 @@ public class Robot extends IterativeRobot {
     		SmartDashboard.putNumber("encoderRR", wheelRR);
 
     		SmartDashboard.putNumber("distance", dist);
+    		SmartDashboard.putNumber("dist2", dist2);
+    		
+    		SmartDashboard.putNumber("lift", liftHeight);
 
     		SmartDashboard.putNumber("gyro", bearing);
+    		
+    		SmartDashboard.putNumber("wheelAngle", printAngle);
+    		SmartDashboard.putNumber("POV", xBox.getPOV());
+    		
+    		
+    		
     		if (setLF && setRF && setLR && setRR) newSet = true;
     		else newSet = false;
     		SmartDashboard.putBoolean("wheelsSet", newSet);
-    	}
+    		
+  //  		printf("gyro = %d\n",moeGyro.getAngle());
+    		}
     }
 
     /**
@@ -383,11 +444,14 @@ public class Robot extends IterativeRobot {
     	if (!nearLF || !nearRF || !nearLR || !nearRR) power = 0;
 
     	driveAllWheels(power,power,power,power);
+    	
+    	printAngle = wheelAngle;
 
     }
     
     void swerveDrive360() {
     	double power;
+    	double twist;
     	double angleLF;
     	double angleRF;
     	double angleLR;
@@ -401,9 +465,14 @@ public class Robot extends IterativeRobot {
 //    	if (Math.abs(y) > Math.abs(x)) power = Math.abs(y);
 //    	else power = Math.abs(x);
     	
-    	double twist = xBox.getX();
-    	if (twist > 0.5) twist = 0.15;
-    	else if (twist < -0.5) twist = -0.15;
+    	double newTwist = xBox.getX();
+    	if (newTwist > 0.1 || newTwist < -0.1) {
+    		twist = newTwist * 0.4;
+    	}
+ //   	if (twist > 0.7) twist = 0.2;
+ //   	else if (twist > 0.4) twist = 0.15;
+//    	else if (twist < -0.7) twist = -0.2;
+ //   	else if (twist < -0.5) twist = -0.15;
     	else twist = 0;
 
     	power = Math.sqrt(x*x + y*y);
@@ -411,16 +480,30 @@ public class Robot extends IterativeRobot {
 
     	if (power <=0.3) {
   //  	if (x<0.4 && x>-0.4 && y<0.4 && y>-0.4) {
-    		x = saveX;
-    		y = saveY;
-    		power = 0;
-    		twist = 0;
+    		
+    		if (newTwist > 0.5 || newTwist < -0.5 || turnAround) {
+    			x = 0;
+    			y = 0;
+    			twist = 0.5;
+   // 			twist = Math.abs(newTwist);
+    //			if (twist <=0.5) twist = 0.5;
+    			turnAround = true;
+    			power = 0.7 * newTwist;
+    		}
+    		else {
+    			turnAround = false;
+    			x = saveX;
+        		y = saveY;
+        		power = 0;
+    			twist = 0;
+    		}
     		if (!setWheels) startWheelSet();
    // 		setWheels = true;
     	}
     	else {
     		power = (power - 0.3)/0.7;
     		setWheels = false;
+    		turnAround = false;
     	}
     	
     	if (xBox.getRawButton(5)) power = 0.5*power;
@@ -429,7 +512,8 @@ public class Robot extends IterativeRobot {
     	saveY = y;
     	
 //Field Centric code
-    	/*
+    	
+    	if (!turnAround) {
     	double robotCent = computeAngle(y,x);
     	double bearing = moeGyro.getAngle();
     	if (bearing > 180) bearing = bearing - 360;
@@ -440,7 +524,8 @@ public class Robot extends IterativeRobot {
     	getFieldCentricValues(robotCent);
     	x = fieldX;
     	y = fieldY;
-    	*/
+    	}
+    	
     	
     
     	
@@ -465,6 +550,8 @@ public class Robot extends IterativeRobot {
     	if (!nearLF || !nearRF || !nearLR || !nearRR) power = 0;
 
     	driveAllWheels(power,power,power,power);
+    	
+    	printAngle = angleLF;
     	
     }
     
@@ -562,12 +649,15 @@ public class Robot extends IterativeRobot {
     	if (!nearLF || !nearRF || !nearLR || !nearRR) power = 0;
 
     	driveAllWheels(power,power,power,power);
+    	
+    	printAngle = angleLF;
 
     }
     
     void optimizedSwerve()
     {
     	double power;
+    	double twist;
     	double angleLF;
     	double angleRF;
     	double angleLR;
@@ -581,34 +671,54 @@ public class Robot extends IterativeRobot {
  //   	if (Math.abs(y) > Math.abs(x)) power = Math.abs(y);
  //   	else power = Math.abs(x);
 
-    	double twist = xBox.getX();
-    	if (twist > 0.5) twist = 0.15;
-    	else if (twist < -0.5) twist = -0.15;
+     	double newTwist = xBox.getX();
+    	if (newTwist > 0.1 || newTwist < -0.1) {
+    		twist = newTwist * 0.4;
+    	}
+ //   	if (twist > 0.7) twist = 0.2;
+ //   	else if (twist > 0.4) twist = 0.15;
+//    	else if (twist < -0.7) twist = -0.2;
+ //   	else if (twist < -0.5) twist = -0.15;
     	else twist = 0;
+
 
     	power = Math.sqrt(x*x + y*y);
     	power = limit(power);
 
-    	if (power <= 0.3) {
- //   	if (x<0.4 && x>-0.4 && y<0.4 && y>-0.4) {
-    		x = saveX;
-    		y = saveY;
-    		power = 0;
-    		twist = 0;
-    		if (!setWheels) startWheelSet();
- //   		setWheels = true;
-    	}
-    	else {
-    		power = (power - 0.3)/0.7;
-    		setWheels = false;
-    	}
+    	if (power <=0.3) {
+    		  //  	if (x<0.4 && x>-0.4 && y<0.4 && y>-0.4) {
+    		    		
+    		    		if (newTwist > 0.5 || newTwist < -0.5 || turnAround) {
+    		    			x = 0;
+    		    			y = 0;
+    		    			twist = 0.5;
+    		   // 			twist = Math.abs(newTwist);
+    		    //			if (twist <=0.5) twist = 0.5;
+    		    			turnAround = true;
+    		    			power = 0.7 * newTwist;
+    		    		}
+    		    		else {
+    		    			turnAround = false;
+    		    			x = saveX;
+    		        		y = saveY;
+    		        		power = 0;
+    		    			twist = 0;
+    		    		}
+    		    		if (!setWheels) startWheelSet();
+    		   // 		setWheels = true;
+    		    	}
+    		    	else {
+    		    		power = (power - 0.3)/0.7;
+    		    		setWheels = false;
+    		    		turnAround = false;
+    		    	}
     	
     	if (xBox.getRawButton(5)) power = 0.5*power;
 
     	
 
-    	double startingAngle = getBestAngle(y,x);
-    	if (reverse) {
+    	boolean reverseAngleDirection = chooseBestAngle(y,x);
+    	if (reverseAngleDirection) {
     		x = -x;
     		y = -y;
     		power = -power;
@@ -639,6 +749,8 @@ public class Robot extends IterativeRobot {
     	if (!nearLF || !nearRF || !nearLR || !nearRR) power = 0;
 
     	driveAllWheels(power,power,power,power);
+    	
+    	printAngle = angleLF;
 
     }
 
@@ -669,12 +781,14 @@ public class Robot extends IterativeRobot {
     	}
     	else 
     	driveAllWheels(y,y,y,y);
+    	
+    	printAngle = wheelAngle;
 
     }
     
     void tankDrive() {
     	
-    	double x = xBox.getX();
+    	double x = xBox.getRawAxis(4);
     	double y = -xBox.getRawAxis(5);
     	
     	if (x<0.1 && x>-0.1) x = 0;
@@ -697,6 +811,8 @@ public class Robot extends IterativeRobot {
     	driveAllWheels(leftSide,rightSide,leftSide,rightSide);
     	}
     	
+    	printAngle = 0;
+    	
     }
     
     void driveStraight(){
@@ -715,11 +831,13 @@ public class Robot extends IterativeRobot {
     	double power = -xBox.getRawAxis(5);
     	
     	double bearing = moeGyro.getAngle();
-    	double addSum = SmartDashboard.getNumber("DB/Slider 0", 0.0);   //0 for now
-    	double proportional = SmartDashboard.getNumber("DB/Slider 1", 0.0);   //1 for now
     	
-    	if (bearing > 0.75 && straightSum < 0.1 && straightSum > -0.1) straightSum = -2;
-    	else if (bearing < -0.75 && straightSum < 0.1 && straightSum > -0.1) straightSum = 2;
+    	double proportional = SmartDashboard.getNumber("DB/Slider 0", 0.0);   //1 for now
+    	double startSum = SmartDashboard.getNumber("DB/Slider 1", 0.0);      //try 1 to start
+    	double addSum = 0.02 * SmartDashboard.getNumber("DB/Slider 2", 0.0);   //0 for now
+    	
+    	if (bearing > 0.75 && straightSum < 0.1 && straightSum > -0.1) straightSum = -startSum;
+    	else if (bearing < -0.75 && straightSum < 0.1 && straightSum > -0.1) straightSum = startSum;
     	
     	if (bearing > 0.8 && bearing < 8) {
     		straightSum = straightSum - addSum;
@@ -732,11 +850,16 @@ public class Robot extends IterativeRobot {
     	else if (bearing < 0) twist = -proportional*bearing;
     	else twist = 0;
     	
+    	if (twist > 3) twist = 3;
+    	else if (twist < -3) twist = -3;
+    	
     	double newTwist = straightSum + twist;
+  //  	if (newTwist > 3) newTwist = 3;
+ //   	else if (newTwist < -3) newTwist = -3;
     	
     	if (power < 0.1 && power > -0.1) power = 0;
-    	if (power > 0.6) power = 0.6;
-    	else if (power < -0.6) power = -0.6;
+    	if (power > 0.5) power = 0.5;
+    	else if (power < -0.5) power = -0.5;
     	
     	double wheelAngle = computeAngle(y,x);
     	
@@ -780,7 +903,7 @@ public class Robot extends IterativeRobot {
     		driveAllWheels(0,0,0,0);
     	}
     	else {
-    		double power = xBox.getRawAxis(4);
+    		double power = xBox.getX();
     		driveAllWheels(power,-power,power,-power);
     	}
 
@@ -880,7 +1003,7 @@ public class Robot extends IterativeRobot {
     	if (oldLR > 180) oldLR = oldLR - 360;
     	else if (oldLR < -180) oldLR = oldLR + 360;
     	dirLR = getDirection(oldLR,newAngle);
-    	double deltaLR = Math.abs(newAngle - oldLR);
+    	deltaLR = Math.abs(newAngle - oldLR);
     	if (deltaLR> 180) deltaLR = 360 - deltaLR;
     	if (deltaLR < 30) nearLR = true;
     	else nearLR = false;
@@ -980,8 +1103,10 @@ public class Robot extends IterativeRobot {
     	
     	double slowAngle = SmartDashboard.getNumber("DB/Slider 2", 0.0);
     	double gain = SmartDashboard.getNumber("DB/Slider 3",0.0);
-    	slowAngle = slowAngle*4.;
-    	gain = gain * .004;
+//    	slowAngle = slowAngle*4.;
+//    	gain = gain * .004;
+    	slowAngle = 12;
+    	gain = .012;
 
     	if (error <= setPoint) power = 0;
     	else if (error <= slowAngle) power = 0.2;  	
@@ -1020,22 +1145,25 @@ public class Robot extends IterativeRobot {
     	return newAngle;
     }
     
-    double getBestAngle(double y,double x) {
+    boolean chooseBestAngle(double y,double x) {
      	double newAngle;
+     	boolean angleReverse;
      	double currentAngle = getCurrentAngle();
     	newAngle = 180*Math.atan2(y, x)/Math.PI;
     	newAngle = -newAngle + 90;
     	if (newAngle >= 180) newAngle = newAngle - 360;
     	if (newAngle - currentAngle > 110) {
     		newAngle = newAngle - 180;
-    		reverse = true;
+    		if (newAngle < -180) newAngle = newAngle + 360;
+    		angleReverse = true;
     	}
     	else if (newAngle - currentAngle < -110) {
     		newAngle = newAngle + 180;
-    		reverse = true;
+    		if (newAngle >= 180) newAngle = newAngle - 360;
+    		angleReverse = true;
     	}
-    	else reverse = false;
-    	return newAngle;
+    	else angleReverse = false;
+    	return angleReverse;
     	
     }
     
@@ -1074,14 +1202,14 @@ public class Robot extends IterativeRobot {
     void startWheelSet() {
     	allSet = false;
     	setWheels = true;
-    	overshootLF = false;
-    	overshootRF = false;
-    	overshootLR = false;
-    	overshootRR = false;
-    	sumLF = 5;
-    	sumRF = 5;
-    	sumLR = 5;
-    	sumRR = 5;
+ //   	overshootLF = false;
+ //   	overshootRF = false;
+ //   	overshootLR = false;
+//   	overshootRR = false;
+//    	sumLF = 5;
+//    	sumRF = 5;
+ //   	sumLR = 5;
+//    	sumRR = 5;
     }
     
     void encoderRevolutionCheck() {
@@ -1107,11 +1235,18 @@ public class Robot extends IterativeRobot {
     	double twist;
     	
     	double bearing = moeGyro.getAngle();
-    	double addSum = SmartDashboard.getNumber("DB/Slider 0", 0.0);   //0 for now
-    	double proportional = SmartDashboard.getNumber("DB/Slider 1", 0.0);   //1 for now
     	
-    	if (bearing > 0.75 && straightSum < 0.1 && straightSum > -0.1) straightSum = -2;
-    	else if (bearing < -0.75 && straightSum < 0.1 && straightSum > -0.1) straightSum = 2;
+    	if (bearing < lowBearing) lowBearing = bearing;
+    	else if (bearing > highBearing) highBearing = bearing;
+    	sumBearing = sumBearing + bearing;
+    	avgBearing = sumBearing/loopCount;
+    
+    	double proportional = SmartDashboard.getNumber("DB/Slider 0", 0.0);   //1 for now
+    	double startSum = SmartDashboard.getNumber("DB/Slider 1", 0.0);      //try 1 to start
+    	double addSum = 0.02 * SmartDashboard.getNumber("DB/Slider 2", 0.0);   //0 for now
+    	
+    	if (bearing > 0.75 && straightSum < 0.1 && straightSum > -0.1) straightSum = -startSum;
+    	else if (bearing < -0.75 && straightSum < 0.1 && straightSum > -0.1) straightSum = startSum;
     	
     	if (bearing > 0.8 && bearing < 8) {
     		straightSum = straightSum - addSum;
@@ -1124,7 +1259,14 @@ public class Robot extends IterativeRobot {
     	else if (bearing < 0) twist = -proportional*bearing;
     	else twist = 0;
     	
-    	double newTwist = straightSum + twist;
+    	if (twist > 3) twist = 3;
+    	else if (twist < -3) twist = -3;
+    	
+     	double newTwist = straightSum + twist;
+   // 	if (newTwist > 3) newTwist = 3;
+  // 	else if (newTwist < -3) newTwist = -3;
+    	
+ //   	newTwist = straightSum + twist;
     	
      	
     	if (wheelAngle > -45 && wheelAngle < 45) {
@@ -1206,12 +1348,13 @@ public class Robot extends IterativeRobot {
 
     	if (setWheels) {
     		double wheelAngle = computeAngle(y,x);
+    		printAngle = wheelAngle;
     		adjustAllWheels(wheelAngle,wheelAngle,wheelAngle,wheelAngle);
 
     		if (setLF && setRF && setLR && setRR) allSet = true;
     		if (allSet) {
     			countTime++;
-    			if (countTime < 100)  driveAllWheels(0.4,0.4,0.4,0.4);
+    			if (countTime < 50)  driveAllWheels(0.4,0.4,0.4,0.4);
     			else driveAllWheels(0,0,0,0);
     		}
     		else driveAllWheels(0,0,0,0);
@@ -1220,4 +1363,91 @@ public class Robot extends IterativeRobot {
     	else driveAllWheels(0,0,0,0);
 
     }
+    void autoStackRoutine() {
+    	double power;
+    	switch(autoStep) {
+    	case 1: 
+    		adjustAllWheels(-90,-90,-90,-90);
+    		if (setLF && setRF && setLR && setRR) {
+    			autoStep = 2;
+    			loopCount = 0;
+    			distEncoder.reset();
+    			lowBearing = 0;
+    			highBearing = 0;
+    			avgBearing = 0;
+    			sumBearing = 0;
+    		}
+    		break;
+    	case 2:
+    		power = 0.1 + loopCount*.05;
+    		if (power > 0.4) power = 0.4;    		
+    		if (distEncoder.getRaw() > 4500) {
+    			autoStep = 3;
+    			driveAllWheels(0,0,0,0);
+    			SmartDashboard.putNumber("lowB", lowBearing);
+    			SmartDashboard.putNumber("highB", highBearing);
+    			SmartDashboard.putNumber("avgB", avgBearing);
+    		}
+    		else {
+    			autoStraight(-90,power);
+    			driveAllWheels(0.4,0.4,0.4,0.4);
+    		}
+    		break;
+    	case 3:
+    		adjustAllWheels(0,0,0,0);
+    		if (setLF && setRF && setLR && setRR) {
+    			autoStep = 4;
+    			distEncoder.reset();
+    		}
+    		break;
+    	case 4:
+    		adjustAllWheels(0,0,0,0);
+    		driveAllWheels(0.4,0.4,0.4,0.4);
+    		if (distEncoder.getRaw() > 100) {
+    			autoStep = 5;
+    			driveAllWheels(0,0,0,0);
+    		}
+    		break;
+    	case 5:
+    		adjustAllWheels(-90,-90,-90,-90);
+    		if (setLF && setRF && setLR && setRR) {
+    			autoStep = 6;
+    			distEncoder.reset();
+    			loopCount = 0;
+    			lowBearing = 0;
+    			highBearing = 0;
+    			avgBearing = 0;
+    			sumBearing = 0;
+    		}
+    		break;
+    	case 6:
+    		power = 0.1 + loopCount*.05;
+    		if (power > 0.4) power = 0.4;    		
+    		if (distEncoder.getRaw() > 4500) {
+    			autoStep = 7;
+    			driveAllWheels(0,0,0,0);
+    			SmartDashboard.putNumber("lowB", lowBearing);
+    			SmartDashboard.putNumber("highB", highBearing);
+    			SmartDashboard.putNumber("avgB", avgBearing);
+    		}
+    		else {
+    			autoStraight(-90,power);
+    			driveAllWheels(0.4,0.4,0.4,0.4);
+    		}
+    		break;
+    	case 7:
+    		adjustAllWheels(0,0,0,0);
+    		driveAllWheels(0,0,0,0);
+    		break;
+    	default:
+    			adjustAllWheels(0,0,0,0);
+        		driveAllWheels(0,0,0,0);
+    			
+    	}
+    	
+    	
+    	
+    }
+    
+    
 }
