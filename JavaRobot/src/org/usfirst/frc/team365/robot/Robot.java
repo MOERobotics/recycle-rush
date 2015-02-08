@@ -1,7 +1,7 @@
 package org.usfirst.frc.team365.robot; // Jonathan Zhang
 // ERIC
 import edu.wpi.first.wpilibj.CANTalon;
-import edu.wpi.first.wpilibj.CounterBase.EncodingType;
+import edu.wpi.first .wpilibj.CounterBase.EncodingType;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.Gyro;
